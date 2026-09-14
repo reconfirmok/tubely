@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/database"
 
 	"github.com/joho/godotenv"
@@ -17,6 +23,7 @@ type apiConfig struct {
 	platform         string
 	filepathRoot     string
 	assetsRoot       string
+	s3Client         *s3.Client
 	s3Bucket         string
 	s3Region         string
 	s3CfDistribution string
@@ -76,6 +83,34 @@ func main() {
 		log.Fatal("PORT environment variable is not set")
 	}
 
+	// R2
+	accountID := os.Getenv("ACCOUNT_ID")
+	if accountID == "" {
+		log.Fatal("ACCOUNT_ID variable is not set")
+	}
+
+	accessKeyId := os.Getenv("ACCESS_KEY_ID")
+	if accessKeyId == "" {
+		log.Fatal("ACCESS_KEY_ID variable is not set")
+	}
+
+	accessKeySecret := os.Getenv("ACCESS_KEY_SECRET")
+	if accessKeySecret == "" {
+		log.Fatal("ACCESS_KEY_SECRET variable is not set")
+	}
+
+	rtwoCfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKeyId, accessKeySecret, "")),
+		config.WithRegion(s3Region), // Required by SDK but not used by R2
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s3Client := s3.NewFromConfig(rtwoCfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID))
+	})
+
 	cfg := apiConfig{
 		db:               db,
 		jwtSecret:        jwtSecret,
@@ -85,6 +120,7 @@ func main() {
 		s3Bucket:         s3Bucket,
 		s3Region:         s3Region,
 		s3CfDistribution: s3CfDistribution,
+		s3Client:         s3Client,
 		port:             port,
 	}
 

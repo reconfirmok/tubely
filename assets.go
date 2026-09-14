@@ -28,6 +28,10 @@ func getAssetName(mediaType string) string {
 	return fmt.Sprintf("%s%s", id, ext)
 }
 
+func (cfg apiConfig) getObjectURL(key string) string {
+	return fmt.Sprintf("https://%s/%s", os.Getenv("R2_PUBLIC_DOMAIN"), key)
+}
+
 func (cfg apiConfig) getAssetPath(assetName string) string {
 	return filepath.Join(cfg.assetsRoot, assetName)
 }
